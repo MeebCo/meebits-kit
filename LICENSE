@@ -22,4 +22,5 @@ SOFTWARE.
 
 This licence covers everything in this repository: the code and the motion files
 in blender/meebits_kit/motions, made by Bailey for MeebCo. It does not cover the
-Meebit models the code downloads; see "Rights" in README.md.
+Meebit models the code downloads, which stay under the Meebits NFT License Terms
+(https://meebits.com/legal/license); see "Rights" in README.md.
