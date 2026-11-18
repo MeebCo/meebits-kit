@@ -1,0 +1,18 @@
+schema_version = "1.0.0"
+
+id = "meebits_kit"
+version = "0.1.0"
+name = "Meebits Kit"
+tagline = "Load any Meebit by token number, posed and ready to render"
+maintainer = "MeebCo"
+type = "add-on"
+website = "https://github.com/MeebCo/meebits-kit"
+tags = ["Import-Export", "Lighting", "Render"]
+
+blender_version_min = "4.2.0"
+
+license = ["SPDX:MIT"]
+
+[permissions]
+network = "Download Meebit models from the MeebCo CDN"
+files = "Cache downloaded Meebit models on disk"
