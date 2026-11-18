@@ -20,5 +20,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-This licence covers the code in this repository only. It does not cover the
+This licence covers everything in this repository: the code and the motion files
+in blender/meebits_kit/motions, made by Bailey for MeebCo. It does not cover the
 Meebit models the code downloads; see "Rights" in README.md.
