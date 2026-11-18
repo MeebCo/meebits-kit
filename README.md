@@ -136,8 +136,8 @@ The rig uses the UE5 mannequin's 87 bone names. We haven't tested mannequin anim
 
 The MIT licence in this repo covers the kit's code and Bailey's motions, and nothing else. The Meebit
 models are not part of this repo: the kit downloads them from the MeebCo CDN, and they stay under the
-[Meebits NFT License Terms](https://meebits.com/legal/license). Use your Meebits as those terms allow. This kit doesn't grant any new rights to the models or to the
-renders you make of them.
+[Meebits NFT License Terms](https://meebits.com/legal/license). Use your Meebits as those terms allow.
+This kit doesn't grant any new rights to the models or to the renders you make of them.
 
 The motions were made by Bailey for MeebCo and are under the same MIT licence as the code.
 
