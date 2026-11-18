@@ -1,11 +1,12 @@
 """Turn a Meebit into a GLB that Unreal Engine can import. Runs inside Blender, in the background.
 
-    blender -b --factory-startup --online-mode --python unreal/meebit_to_unreal.py -- 8506 Meebit_08506.glb
+    blender -b --factory-startup --online-mode --python unreal/meebit_to_unreal.py -- 8506 Meebit_08506.glb [motions]
 
 The MeebCo CDN serves the web copies: meshopt-compressed geometry and WebP textures, which Unreal's
 glTF importer can't read. This writes the same Meebit with plain geometry and PNG textures. The rig
 is unchanged (the Unreal mannequin's 87 bones in the T-pose), and the standard arms-down pose comes
-along as a one-pose animation called ArmsDown.
+along as a one-pose animation called ArmsDown. Bailey's motions come along too, one animation each, in the
+version made for this Meebit's skeleton: all 23 by default, or a comma-separated list (idle1,walk1), or none.
 
 meebits_kit_unreal.py runs this for you from inside the Unreal Editor.
 """
@@ -17,12 +18,14 @@ import tempfile
 import bpy
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "blender"))
-from meebits_kit import core  # noqa: E402
+from meebits_kit import core, motion  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-if len(argv) != 2:
-    sys.exit("usage: blender -b --online-mode --python meebit_to_unreal.py -- <token> <out.glb>")
+if len(argv) not in (2, 3):
+    sys.exit("usage: blender -b --online-mode --python meebit_to_unreal.py -- <token> <out.glb> [all|none|idle1,walk1]")
 token, out = core.check_token(argv[0]), os.path.abspath(argv[1])
+wanted = argv[2] if len(argv) == 3 else "all"
+motions = motion.names() if wanted == "all" else [] if wanted == "none" else [m for m in wanted.split(",") if m]
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 rig = core.load(token, "T_POSE")
@@ -37,8 +40,15 @@ with bpy.context.temp_override(active_object=parts[0], object=parts[0], selected
 parts[0].name = parts[0].data.name = f"Meebit_{token:05d}"
 bpy.context.view_layer.update()
 
+for name in motions:                      # in place: in Unreal, move the Meebit (or use root motion) yourself
+    action = motion.apply(rig, name, move=False)
+    action.name = name
+    action.use_fake_user = True
+
 rig.animation_data_create()
-rig.animation_data.action = bpy.data.actions.new("ArmsDown")
+arms_down = bpy.data.actions.new("ArmsDown")
+arms_down.use_fake_user = True
+rig.animation_data.action = arms_down
 core.pose(rig, "ARMS_DOWN")
 for frame in (1, 2):                      # two equal keys: an animation that holds one pose
     for pb in rig.pose.bones:

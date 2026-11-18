@@ -3,9 +3,20 @@
 The panel lives in the 3D view's sidebar (N), in the Meebits tab.
 """
 import bpy
-from bpy.props import EnumProperty, IntProperty, PointerProperty
+from bpy.props import BoolProperty, EnumProperty, IntProperty, PointerProperty
 
-from . import core, look
+from . import core, look, motion
+
+MOTIONS = [(n, n, f"Bailey's {n.rstrip('0123456789')} motion") for n in motion.names()]
+
+
+def selected_meebits(context):
+    rigs = []
+    for o in context.selected_objects:
+        rig = o if o.type == "ARMATURE" else o.parent
+        if rig and rig.type == "ARMATURE" and "meebit_token" in rig and rig not in rigs:
+            rigs.append(rig)
+    return rigs
 
 
 class MeebitsKitSettings(bpy.types.PropertyGroup):
@@ -13,6 +24,9 @@ class MeebitsKitSettings(bpy.types.PropertyGroup):
                        min=core.FIRST, max=core.LAST)
     pose: EnumProperty(name="Pose", items=[(k, v.split(",")[0], v) for k, v in core.POSES.items()],
                        default="ARMS_DOWN")
+    motion: EnumProperty(name="Motion", items=MOTIONS, description="One of Bailey's motions")
+    move: BoolProperty(name="Walk forward", default=True,
+                       description="Walks and runs carry the Meebit forward at the pace of its feet")
 
 
 class MEEBITS_OT_load(bpy.types.Operator):
@@ -56,17 +70,55 @@ class MEEBITS_OT_pose(bpy.types.Operator):
         return self.execute(context)
 
     def execute(self, context):
-        rigs = [o for o in context.selected_objects if o.type == "ARMATURE" and "meebit_token" in o]
-        rigs += [o.parent for o in context.selected_objects
-                 if o.parent and o.parent.type == "ARMATURE" and "meebit_token" in o.parent and o.parent not in rigs]
+        rigs = selected_meebits(context)
         if not rigs:
             self.report({"WARNING"}, "Select a Meebit first")
             return {"CANCELLED"}
         for rig in rigs:
+            motion.stop(rig)
             floor = core.lowest_point(rig)
             core.pose(rig, self.pose)
             rig.location.z += floor - core.lowest_point(rig)
         return {"FINISHED"}
+
+
+class MEEBITS_OT_motion(bpy.types.Operator):
+    """Play one of Bailey's motions on the selected Meebits. Press Play in the timeline to watch"""
+    bl_idname = "meebits.motion"
+    bl_label = "Play Motion"
+    bl_options = {"REGISTER", "UNDO"}
+
+    motion: EnumProperty(name="Motion", items=MOTIONS)
+    move: BoolProperty(name="Walk forward", default=True)
+
+    def invoke(self, context, event):
+        s = context.scene.meebits_kit
+        self.motion, self.move = s.motion, s.move
+        return self.execute(context)
+
+    def execute(self, context):
+        rigs = selected_meebits(context)
+        if not rigs:
+            self.report({"WARNING"}, "Select a Meebit first")
+            return {"CANCELLED"}
+        if context.mode != "OBJECT":
+            bpy.ops.object.mode_set(mode="OBJECT")
+        for rig in rigs:
+            motion.apply(rig, self.motion, move=self.move)
+        return {"FINISHED"}
+
+
+class MEEBITS_OT_stop(bpy.types.Operator):
+    """Take the motion off the selected Meebits"""
+    bl_idname = "meebits.stop"
+    bl_label = "Stop Motion"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        rigs = selected_meebits(context)
+        for rig in rigs:
+            motion.stop(rig)
+        return {"FINISHED"} if rigs else {"CANCELLED"}
 
 
 class MEEBITS_OT_house_look(bpy.types.Operator):
@@ -97,6 +149,12 @@ class VIEW3D_PT_meebits(bpy.types.Panel):
         col.operator(MEEBITS_OT_load.bl_idname, icon="IMPORT")
         col.operator(MEEBITS_OT_pose.bl_idname, icon="ARMATURE_DATA")
         col.separator()
+        col.prop(s, "motion")
+        col.prop(s, "move")
+        row = col.row(align=True)
+        row.operator(MEEBITS_OT_motion.bl_idname, icon="PLAY")
+        row.operator(MEEBITS_OT_stop.bl_idname, icon="X", text="Stop")
+        col.separator()
         col.operator(MEEBITS_OT_house_look.bl_idname, icon="LIGHT_SUN")
         col.operator("render.render", text="Render", icon="RENDER_STILL").use_viewport = False
         if not getattr(bpy.app, "online_access", True):
@@ -106,7 +164,8 @@ class VIEW3D_PT_meebits(bpy.types.Panel):
             box.label(text="Allow Online Access")
 
 
-classes = (MeebitsKitSettings, MEEBITS_OT_load, MEEBITS_OT_pose, MEEBITS_OT_house_look, VIEW3D_PT_meebits)
+classes = (MeebitsKitSettings, MEEBITS_OT_load, MEEBITS_OT_pose, MEEBITS_OT_motion, MEEBITS_OT_stop,
+           MEEBITS_OT_house_look, VIEW3D_PT_meebits)
 
 
 def register():

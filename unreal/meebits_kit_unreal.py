@@ -57,10 +57,13 @@ def find_blender():
                        "program.")
 
 
-def convert(token, out_dir):
+def convert(token, out_dir, motions="all"):
     """Download the Meebit and write an Unreal-ready GLB with Blender. Returns its path."""
     out = os.path.join(out_dir, f"Meebit_{token:05d}.glb")
-    cmd = [find_blender(), "-b", "--factory-startup", "--online-mode", "--python", CONVERTER, "--", str(token), out]
+    if not isinstance(motions, str):
+        motions = ",".join(motions) or "none"
+    cmd = [find_blender(), "-b", "--factory-startup", "--online-mode", "--python", CONVERTER, "--", str(token), out,
+           motions]
     unreal.log(f"Meebits Kit: converting Meebit {token} with Blender")
     run = subprocess.run(cmd, capture_output=True, text=True)
     if run.returncode != 0 or not os.path.isfile(out):
@@ -69,9 +72,12 @@ def convert(token, out_dir):
     return out
 
 
-def import_meebit(token, folder="/Game/Meebits", place=True, location=(0.0, 0.0, 0.0), yaw=0.0):
+def import_meebit(token, folder="/Game/Meebits", place=True, location=(0.0, 0.0, 0.0), yaw=0.0, motions="all"):
     """Import Meebit `token` into `folder`/Meebit_<token>. Returns the placed actor, or the skeletal mesh
-    when place is False."""
+    when place is False.
+
+    motions: Bailey's motions to bring along as animations: "all" (the default), "none", or a list such
+    as ["idle1", "walk1"]."""
     token = int(token)
     if not FIRST <= token <= LAST:
         raise ValueError(f"Meebits run from {FIRST} to {LAST}, so there is no Meebit {token}")
@@ -80,7 +86,7 @@ def import_meebit(token, folder="/Game/Meebits", place=True, location=(0.0, 0.0,
     work = tempfile.mkdtemp(prefix="meebit_")
     try:
         task = unreal.AssetImportTask()
-        task.set_editor_property("filename", convert(token, work))
+        task.set_editor_property("filename", convert(token, work, motions))
         task.set_editor_property("destination_path", dest)
         task.set_editor_property("automated", True)
         task.set_editor_property("replace_existing", True)
@@ -94,16 +100,24 @@ def import_meebit(token, folder="/Game/Meebits", place=True, location=(0.0, 0.0,
     mesh = next((a for a in assets if isinstance(a, unreal.SkeletalMesh)), None)
     if mesh is None:
         raise RuntimeError(f"Unreal imported Meebit {token} without a skeletal mesh; see the Output Log")
-    # The importer names the pose after the file. Call it ArmsDown. On a second import of the same
-    # Meebit, keep the ArmsDown already there (placed Meebits use it) and drop the new copy.
-    anims = [a for a in assets if isinstance(a, unreal.AnimSequence)]
-    anim = next((a for a in anims if a.get_name() == "ArmsDown"), None)
-    fresh = [a for a in anims if a is not anim]
-    if anim is None and fresh:
-        unreal.EditorAssetLibrary.rename_asset(fresh.pop(0).get_path_name().split(".")[0], f"{dest}/ArmsDown")
-        anim = unreal.EditorAssetLibrary.load_asset(f"{dest}/ArmsDown")
-    for extra in fresh:
-        unreal.EditorAssetLibrary.delete_asset(extra.get_path_name().split(".")[0])
+    # The importer names animations after the file (Meebit_08506idle1, or Meebit_08506_Anim when there is
+    # only one). Rename them to the clip's own name: ArmsDown, idle1, walk1... On a second import of the same
+    # Meebit, keep the animation already there (placed Meebits use it) and drop the new copy.
+    prefix = f"Meebit_{token:05d}"
+    lib = unreal.EditorAssetLibrary
+    anim = None
+    for a in [a for a in assets if isinstance(a, unreal.AnimSequence)]:
+        name = a.get_name()
+        clip = name[len(prefix):].lstrip("_") if name.startswith(prefix) else name
+        clip = "ArmsDown" if clip in ("", "Anim") else clip
+        path, target = a.get_path_name().split(".")[0], f"{dest}/{clip}"
+        if path != target:
+            if lib.does_asset_exist(target):
+                lib.delete_asset(path)
+            else:
+                lib.rename_asset(path, target)
+        if clip == "ArmsDown":
+            anim = lib.load_asset(target)
     unreal.log(f"Meebits Kit: imported Meebit {token} to {dest}")
     if not place:
         return mesh

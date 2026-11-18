@@ -5,14 +5,16 @@ Bring any Meebit into Blender or Unreal Engine by its token number.
 ![Five Meebits rendered by the kit with the house look](docs/images/lineup.png)
 
 Type a number and you get that Meebit at the right scale, with its own materials, in the standard
-arms-down pose. In Blender, one more click sets up the house look MeebCo uses for its films: AgX, a
-warm low sun, a plain floor and a low camera looking up. Every image in this README was rendered by
-the kit itself.
+arms-down pose. Then make it move with any of the 23 motions Bailey made for MeebCo: idles, walks,
+runs, chats, greetings and presenting gestures. In Blender, one more click sets up the house look MeebCo
+uses for its films: AgX, a warm low sun, a plain floor and a low camera looking up. Every image in this
+README was rendered by the kit itself.
 
 | Where | What |
 |---|---|
 | [`blender/meebits_kit`](blender/meebits_kit) | The Blender add-on (Blender 4.2 or newer, tested on 5.2) |
 | [`unreal`](unreal) | The Unreal Engine importer (tested on 5.9) |
+| [`blender/meebits_kit/motions`](blender/meebits_kit/motions) | Bailey's 23 motions, as plain JSON any engine can read |
 | [`tools/render.py`](tools/render.py) | Renders Meebits with the house look from the command line |
 
 ## Blender
@@ -39,6 +41,9 @@ Open the sidebar in the 3D view (N) and find the Meebits tab.
 - **Load Meebit** puts the Meebit at the 3D cursor, feet on the cursor, facing -Y. Load as many as you
   like; each one gets its own collection.
 - **Pose Meebits** changes the pose of the selected Meebits.
+- **Motion** and **Play Motion** put one of Bailey's motions on the selected Meebits; press Play in the
+  timeline to watch. With **Walk forward** on, walks and runs carry the Meebit forward at the pace of
+  its feet. **Stop** takes the motion off.
 - **House Look** adds the lights, sky, floor and camera, sets AgX and Cycles, and frames every Meebit in
   the scene in a 4:5 portrait. Run it again after you move things and it reframes.
 - **Render** renders the camera view.
@@ -54,18 +59,33 @@ blender -b --factory-startup --online-mode --python tools/render.py -- 8506 -o r
 ```
 
 Give it several token numbers and they stand in a row, left to right as the camera sees them.
-`--size 1920x1080`, `--samples 256`, `--pose T_POSE` and `--blend scene.blend` do what they say.
+`--motion greet1 --frame 60` renders a moment from one of the motions. `--size 1920x1080`,
+`--samples 256`, `--pose T_POSE` and `--blend scene.blend` do what they say.
 
 ### From your own scripts
 
 ```python
 import sys
 sys.path.insert(0, "/path/to/meebits-kit/blender")
-from meebits_kit import core, look
+from meebits_kit import core, look, motion
 
 rig = core.load(8506)          # download, import, arms down; returns the armature
+motion.apply(rig, "walk1")     # one of Bailey's motions, as an action on the rig
 look.apply()                   # the house look, framing every Meebit in the scene
 ```
+
+## Motions
+
+![Male, female and Visitor Meebits in six of the motions](docs/images/motions.png)
+
+Bailey made 23 motions for MeebCo: `idle1` to `idle5`, `walk1` to `walk5`, `run1` to `run3`, `chat1` to
+`chat3`, `greet1` to `greet4` and `present1` to `present3`. Each comes in three versions, made for the
+three Meebit skeletons: male (which Pigs, Elephants, Robots, Skeletons and Dissected Meebits share),
+female and Visitor. The kit measures the Meebit's arms and picks the right one.
+
+Greetings and presenting play once; everything else loops. Walks and runs are baked in place, with
+their speed over the ground stored next to them. The files are plain JSON, and
+[the format](blender/meebits_kit/motions/README.md) is documented, so you can play them anywhere.
 
 ## Unreal Engine
 
@@ -78,6 +98,8 @@ Type that into the Output Log with the command box set to Cmd. Once it finishes 
 - `/Game/Meebits/Meebit_08506/Meebit_08506`: one skeletal mesh with a material slot for each part
 - its skeleton and physics asset
 - `ArmsDown`: an animation that holds the standard pose
+- Bailey's 23 motions as animations (`idle1`, `walk1` and so on), in the version for this Meebit's
+  skeleton. Walks and runs play in place
 - the materials and textures (`head_BaseColor`, `head_ORM`, `head_Normal` and so on)
 
 The Meebit is also placed in the open level, standing in the ArmsDown pose. It is in centimetres and,
@@ -87,6 +109,7 @@ like the mannequin's mesh, faces +Y. From Python you get more control:
 import meebits_kit_unreal as mk          # add the unreal folder to Project Settings > Python > Additional Paths
 mk.import_meebit(8506, location=(0, 0, 0), yaw=-90)
 mk.import_meebit(1, place=False)         # import only
+mk.import_meebit(3, motions=["idle1", "walk1"])   # only these motions; motions="none" for none
 ```
 
 You need the Python Editor Script Plugin turned on in the project, and Blender installed. You never
@@ -102,7 +125,7 @@ The rig uses the UE5 mannequin's 87 bone names. We haven't tested mannequin anim
   `https://cdn.meebco.com/meebco-site/glb/<token>.glb`, with the token as five digits (`08506.glb`).
   They are about 375 KB each.
 - A Meebit is eight skinned parts (body, head, jaw, hat, upper, lower, legs, shoes), each with a base
-  colour, an ORM map and a normal map, on one 87-bone rig.
+  colour, an ORM map and a normal map, on one rig: 87 bones, or 95 for female Meebits.
 - They come in a T-pose, in metres, facing -Y in Blender, with the Meebit's left side at +X.
 - Downloads are cached in Blender's own folder for the add-on. Scripts outside the add-on use
   `~/Library/Caches/meebits-kit` on a Mac, `%LOCALAPPDATA%\meebits-kit` on Windows and
@@ -116,6 +139,10 @@ this repo: the kit downloads them from the MeebCo CDN, and they stay under the M
 <!-- REVIEW: add the link to the current Meebits licence terms here before this repo goes public. -->
 Use your Meebits as those terms allow. This kit doesn't grant any new rights to the models or to the
 renders you make of them.
+
+The motions were made by Bailey for MeebCo.
+<!-- REVIEW: choose the licence for the motion files (CC BY 4.0 with credit to Bailey and MeebCo is the
+usual pick for creative assets; MIT like the code also works) and say it here and in LICENSE. -->
 
 ## Licence
 
