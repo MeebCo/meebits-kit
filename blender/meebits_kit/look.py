@@ -1,4 +1,7 @@
-"""The house look: AgX, a sky, one warm sun, a plain floor and a low camera looking up at the Meebits.
+"""The house look: AgX, a sky, one warm sun, a plain floor and a camera at the Meebits' eye level.
+
+The camera never looks up at them: a Meebit feels magnificent through the light and the setting, not
+because the audience has to crane its neck.
 
 Running it again updates the same lights, floor and camera instead of adding new ones.
 """
@@ -13,8 +16,7 @@ LOOK = "Meebits Look"
 SUN_ELEVATION = 38     # degrees above the horizon
 SUN_FROM = -35         # compass direction the sun comes from; 0 is from behind the camera
 CAMERA_TURN = 18       # degrees the camera swings round to the Meebit's right of straight on
-CAMERA_TILT = 11       # degrees the camera looks up
-CAMERA_LOWEST = 0.3    # metres: the camera never goes lower than this
+HEAD_TO_EYES = 0.17    # metres from the head bone up to a Meebit's eyes
 LENS = 50
 FLOOR = "#cfc8bd"
 
@@ -137,21 +139,26 @@ def _camera(scene, coll, rigs):
             pts += [ev.matrix_world @ Vector(c) for c in ev.bound_box]
     if not pts:
         pts = [Vector((-0.4, -0.3, 0)), Vector((0.4, 0.3, 1.4))]
-    # The Meebits face -Y, so the camera looks along +Y: swing it round, tip it up, then let Blender
-    # find where it has to stand for everything to fit, and step back for some air. A wide group
-    # pushes the camera far back, and far back at the full tilt it would sink below the floor, so
-    # the tilt eases off until the camera stays above CAMERA_LOWEST.
+    # The Meebits face -Y, so the camera looks along +Y: swing it round, keep it level, let Blender find
+    # where it has to stand for everything to fit, and step back for some air. Then raise or lower it to
+    # the Meebits' eye level and slide the frame (lens shift) so the framing stays the same and upright
+    # lines stay upright.
     coords = [c for p in pts for c in p]
     centre = sum(pts, Vector()) / len(pts)
-    tilt = CAMERA_TILT
-    while True:
-        cam.rotation_euler = Euler((math.radians(90 + tilt), 0, math.radians(-CAMERA_TURN)), "XYZ")
-        bpy.context.view_layer.update()
-        loc, _ = cam.camera_fit_coords(deps, coords)
-        cam.location = centre + (Vector(loc) - centre) * 1.18
-        if cam.location.z >= CAMERA_LOWEST or tilt <= 0:
-            break
-        tilt -= 0.5
+    data.shift_x = data.shift_y = 0.0
+    cam.rotation_euler = Euler((math.radians(90), 0, math.radians(-CAMERA_TURN)), "XYZ")
+    bpy.context.view_layer.update()
+    loc, _ = cam.camera_fit_coords(deps, coords)
+    cam.location = centre + (Vector(loc) - centre) * 1.18
+    eyes = [(rig.matrix_world @ rig.pose.bones["head"].head).z + HEAD_TO_EYES * rig.matrix_world.to_scale()[2]
+            for rig in rigs if "head" in rig.pose.bones]
+    if eyes:
+        view = cam.matrix_world.to_3x3() @ Vector((0, 0, -1))
+        distance = (centre - cam.location).dot(view)
+        frame = distance * data.sensor_width / data.lens        # the frame's longer side, at the Meebits
+        eye = sum(eyes) / len(eyes)
+        data.shift_y = (cam.location.z - eye) / frame
+        cam.location.z = eye
     return cam
 
 

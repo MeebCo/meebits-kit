@@ -7,8 +7,8 @@ Bring any Meebit into Blender or Unreal Engine by its token number.
 Type a number and you get that Meebit at the right scale, with its own materials, in the standard
 arms-down pose. Then make it move with any of the 23 motions Bailey made for MeebCo: idles, walks,
 runs, chats, greetings and presenting gestures. In Blender, one more click sets up the house look MeebCo
-uses for its films: AgX, a warm low sun, a plain floor and a low camera looking up. Every image in this
-README was rendered by the kit itself.
+uses for its films: AgX, a warm low sun, a plain floor and a camera at the Meebits' eye level. Every
+image in this README was rendered by the kit itself.
 
 | Where | What |
 |---|---|

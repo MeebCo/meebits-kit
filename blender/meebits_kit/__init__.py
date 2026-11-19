@@ -122,7 +122,7 @@ class MEEBITS_OT_stop(bpy.types.Operator):
 
 
 class MEEBITS_OT_house_look(bpy.types.Operator):
-    """Add the house look: AgX, a sky, a warm sun, a floor and a low camera framing every Meebit"""
+    """Add the house look: AgX, a sky, a warm sun, a floor and an eye-level camera framing every Meebit"""
     bl_idname = "meebits.house_look"
     bl_label = "House Look"
     bl_options = {"REGISTER", "UNDO"}
