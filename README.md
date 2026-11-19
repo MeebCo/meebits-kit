@@ -74,6 +74,10 @@ motion.apply(rig, "walk1")     # one of Bailey's motions, as an action on the ri
 look.apply()                   # the house look, framing every Meebit in the scene
 ```
 
+Use `motion.apply(rig, "greet1", start=48, set_scene_timing=False)` to place a clip in an
+existing edit. Its keys are spaced for the current scene FPS, including fractional rates, so it
+plays at its authored speed. The scene's FPS, frame range and playhead stay as they are.
+
 ## Motions
 
 ![Male, female and Visitor Meebits in six of the motions](docs/images/motions.png)
