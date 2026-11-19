@@ -47,7 +47,11 @@ def body_type(rig):
 
 def _new_fcurve(action, rig, path, index, group):
     if hasattr(action, "fcurve_ensure_for_datablock"):          # Blender 4.4+
-        return action.fcurve_ensure_for_datablock(rig, path, index=index, group_name=group)
+        fc = action.fcurve_ensure_for_datablock(rig, path, index=index)
+        strip = action.layers[0].strips[0]
+        bag = strip.channelbag(rig.animation_data.action_slot)
+        fc.group = bag.groups.get(group) or bag.groups.new(group)
+        return fc
     return action.fcurves.new(path, index=index, action_group=group)
 
 
@@ -72,11 +76,13 @@ def stop(rig):
     bpy.context.view_layer.update()
 
 
-def apply(rig, name, move=True, body=None, start=1):
+def apply(rig, name, move=True, body=None, start=1, *, set_scene_timing=True):
     """Put motion `name` on the Meebit as an action of the same name, starting at frame `start`.
 
     move: for walks and runs, also move the Meebit forward at the pace of its feet (it faces -Y).
     body: force a skeleton (male, female, visitor) instead of measuring the Meebit.
+    set_scene_timing: set the scene FPS, range and playhead for preview. With False, keep
+    the scene timing and space the motion keys to retain the clip's original speed.
     Returns the action.
     """
     clip = load(name)
@@ -84,7 +90,10 @@ def apply(rig, name, move=True, body=None, start=1):
     data = clip["types"][body]
     rows = data["frames"]
     n = len(rows)
-    frames = [start + i for i in range(n)]
+    scene = bpy.context.scene
+    fps = clip.get("fps", 30)
+    frame_step = 1 if set_scene_timing else scene.render.fps / (scene.render.fps_base * fps)
+    frames = [start + i * frame_step for i in range(n)]
     loop = clip.get("loop", True)
 
     for pb in rig.pose.bones:                    # start from the T-pose
@@ -144,7 +153,6 @@ def apply(rig, name, move=True, body=None, start=1):
     speed = data.get("speed", 0.0)
     if move and speed and clip.get("travel"):
         # Walks and runs are baked in place: carry the Meebit forward, one cycle's distance per cycle.
-        fps = clip.get("fps", 30)
         forward = (rig.matrix_world.to_3x3() @ Vector((0, -1, 0)))
         forward.z = 0
         forward = forward.normalized() * speed * (n - 1) / fps
@@ -159,8 +167,8 @@ def apply(rig, name, move=True, body=None, start=1):
             mod.mode_before = mod.mode_after = "REPEAT_OFFSET"
             fc.update()
 
-    scene = bpy.context.scene
-    scene.render.fps, scene.render.fps_base = clip.get("fps", 30), 1.0
-    scene.frame_start, scene.frame_end = start, max(start + n - 1, start + 1)
-    scene.frame_set(start)
+    if set_scene_timing:
+        scene.render.fps, scene.render.fps_base = fps, 1.0
+        scene.frame_start, scene.frame_end = start, max(start + n - 1, start + 1)
+        scene.frame_set(start)
     return action
