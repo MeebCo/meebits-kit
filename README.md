@@ -16,6 +16,8 @@ image in this README was rendered by the kit itself.
 | [`unreal`](unreal) | The Unreal Engine importer (tested on 5.9) |
 | [`blender/meebits_kit/motions`](blender/meebits_kit/motions) | Bailey's 23 motions, as plain JSON any engine can read |
 | [`tools/render.py`](tools/render.py) | Renders Meebits with the house look from the command line |
+| [`tools/wallpaper.py`](tools/wallpaper.py) | Makes an iPhone spatial Lock Screen wallpaper of any Meebit |
+| [`.claude/skills/meebit-wallpaper`](.claude/skills/meebit-wallpaper) | A Claude Code skill that makes the wallpaper for you |
 
 ## Blender
 
@@ -72,6 +74,60 @@ from meebits_kit import core, look, motion
 rig = core.load(8506)          # download, import, arms down; returns the armature
 motion.apply(rig, "walk1")     # one of Bailey's motions, as an action on the rig
 look.apply()                   # the house look, framing every Meebit in the scene
+```
+
+## iPhone spatial wallpapers
+
+![Meebits 8506 and 2785 in the space capsule and the gift box, with a Lock Screen clock drawn on top](docs/images/wallpapers.png)
+
+*Wallpapers made by the kit, with the Lock Screen clock and buttons drawn on top to show where they land.*
+
+iOS 26 can turn a Lock Screen photo into a spatial scene: it cuts out the subject, slides the clock in
+behind it and moves the layers as you tilt the phone. It works out the depth by itself, so the picture
+has to separate cleanly on its own. We made a set of these for our own phones and kept what worked.
+
+```bash
+blender -b --factory-startup --online-mode --python tools/wallpaper.py -- 8506 --preview
+blender -b --factory-startup --online-mode --python tools/wallpaper.py -- 8506
+```
+
+The first is a quick look at phone size. The second is the real one: `renders/08506_capsule_iphone.png`,
+2640 x 5736, plus a 16-bit master, a mask of the Meebit and a report. AirDrop the `_iphone.png` to your
+phone, add it as a Lock Screen wallpaper and turn on the spatial scene.
+
+Two scenes so far:
+
+- `--scene capsule` (the default): a white space capsule with its hatch open onto a close, detailed Earth,
+  built in layers (surface, city lights, clouds, atmosphere) so the tilt has something to work with. The
+  Earth maps are NASA's; the kit downloads them the first time, about 75 MB, and keeps them.
+- `--scene giftbox`: your Meebit standing in an opened Christmas present with its back folded down flat, so
+  the room shows behind its whole body: wrapped presents, a lit tree and snow outside the window.
+
+What the kit takes care of, so you don't have to find it out the way we did:
+
+- **The clock.** iOS zooms the wallpaper 1.15x. If the Meebit's head covers too much of the digits, iOS
+  puts the clock in front of it and the effect is gone. The kit frames every Meebit so its head overlaps
+  the digits by about 17%, with its feet clear of the flashlight and camera buttons.
+- **Sharpness.** iOS renders the cut-out subject much softer than the background. A phone-size file looked
+  blurry on the phone; the same render at 2x looked sharp. So the phone file is the 2x render.
+- **The cut-out.** The report measures how well the Meebit's outline stands out from the background, since
+  a weak edge gives a ragged cut-out.
+- **The look.** Eye level, a level camera, the Meebit's own colours with a polished plastic finish, lights
+  that only touch the Meebit, and a dark area behind the clock so it stays readable.
+
+**With Claude Code**: open Claude Code in this folder and ask for "a spatial wallpaper of Meebit 8506". The
+[`meebit-wallpaper`](.claude/skills/meebit-wallpaper/SKILL.md) skill runs the preview, reads the checks,
+renders the full size and tells you how to put it on your phone. To use it from any folder, copy
+`.claude/skills/meebit-wallpaper` into `~/.claude/skills/`. The skill also lists what we learned, if you
+want to build a scene of your own.
+
+From your own scripts:
+
+```python
+from meebits_kit import wallpaper
+
+wallpaper.make(8506, "giftbox", "renders")   # build, render, check; returns the report
+wallpaper.build(8506, "capsule")             # or just build the scene and render it yourself
 ```
 
 ## Motions
@@ -140,6 +196,10 @@ models are not part of this repo: the kit downloads them from the MeebCo CDN, an
 This kit doesn't grant any new rights to the models or to the renders you make of them.
 
 The motions were made by Bailey for MeebCo and are under the same MIT licence as the code.
+
+The Earth in the wallpaper capsule uses NASA's Blue Marble, Black Marble and GEBCO relief maps (NASA
+Visible Earth and Earth Observatory). They aren't in this repo either: the kit downloads them from NASA.
+Credit NASA if you share an image that shows the Earth.
 
 ## Licence
 
