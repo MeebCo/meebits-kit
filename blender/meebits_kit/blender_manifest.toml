@@ -14,5 +14,5 @@ blender_version_min = "4.2.0"
 license = ["SPDX:MIT"]
 
 [permissions]
-network = "Download Meebit models from the MeebCo CDN"
-files = "Cache downloaded Meebit models on disk"
+network = "Download Meebit models from the MeebCo CDN, and NASA Earth maps for the wallpaper capsule"
+files = "Cache downloaded Meebit models and Earth maps on disk"
